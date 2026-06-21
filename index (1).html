@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>Daybook</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%23151515%22/><path d=%22M30 52 L44 66 L72 34%22 stroke=%22%23E8A33D%22 stroke-width=%229%22 fill=%22none%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/></svg>">
+<style>
+:root{
+  --bg:#121212; --bg-raised:#1B1B1B; --bg-card:#1F1F1F;
+  --line:#2D2D2D; --line-soft:#232323;
+  --text:#ECEAE5; --text-dim:#9A9890; --text-faint:#5E5C56;
+  --amber:#E8A33D; --amber-dim:#6B4E22;
+  --red:#D9685A; --green:#6FA86F; --blue:#5B9BD5;
+  --mono:'SF Mono','Roboto Mono',ui-monospace,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --safe-top:env(safe-area-inset-top,0px); --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overscroll-behavior-y:none;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;}
+button,input,textarea,select{font-family:inherit;}
+input,textarea,select{background:var(--bg-raised);border:1px solid var(--line-soft);color:var(--text);border-radius:9px;padding:9px 11px;font-size:14.5px;}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--amber-dim);}
+input::placeholder,textarea::placeholder{color:var(--text-faint);}
+
+/* App shell */
+#app{padding-top:var(--safe-top);min-height:100vh;display:flex;flex-direction:column;}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;flex-shrink:0;}
+.brand{display:flex;align-items:center;gap:9px;}
+.brand-mark{width:24px;height:24px;border-radius:7px;background:var(--amber);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.brand-mark svg{width:13px;height:13px;}
+.brand-text{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);font-weight:600;}
+.tab-title{font-size:20px;font-weight:600;padding:0 18px 14px;flex-shrink:0;}
+
+.content{flex:1;overflow-y:auto;padding-bottom:110px;}
+.page{display:none;padding:0 14px;}
+.page.active{display:block;}
+.subpage{display:none;}
+.subpage.active{display:block;}
+
+.subswitch{display:flex;gap:6px;padding:0 14px 14px;}
+.subswitch button{flex:1;background:var(--bg-card);border:1px solid var(--line-soft);color:var(--text-dim);padding:9px;border-radius:10px;font-size:13.5px;font-weight:600;}
+.subswitch button.active{background:var(--amber);color:#151515;border-color:var(--amber);}
+
+/* Bottom nav */
+.bottomnav{position:fixed;left:0;right:0;bottom:0;background:rgba(18,18,18,.96);backdrop-filter:blur(8px);border-top:1px solid var(--line-soft);display:flex;padding-bottom:var(--safe-bottom);z-index:30;}
+.navbtn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px 8px;background:none;border:none;color:var(--text-faint);}
+.navbtn svg{width:21px;height:21px;}
+.navbtn span{font-size:10.5px;font-weight:600;}
+.navbtn.active{color:var(--amber);}
+
+/* Shared components */
+.card{background:var(--bg-card);border:1px solid var(--line-soft);border-radius:13px;padding:13px 14px;margin-bottom:9px;}
+.section-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-faint);padding:14px 4px 8px;font-weight:600;}
+.row{display:flex;align-items:center;gap:10px;}
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.btn{border:none;border-radius:10px;padding:10px 14px;font-size:14px;font-weight:600;background:var(--bg-card);color:var(--text);border:1px solid var(--line);}
+.btn-primary{background:var(--amber);color:#151515;border:none;}
+.btn-icon{width:38px;height:38px;border-radius:10px;background:var(--bg-card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text);}
+.btn-icon svg{width:16px;height:16px;}
+.fab{position:fixed;right:16px;bottom:90px;width:54px;height:54px;border-radius:50%;background:var(--amber);border:none;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.45);z-index:25;}
+.fab svg{width:22px;height:22px;}
+.fab:active{transform:scale(.94);}
+.empty{text-align:center;padding:50px 24px;color:var(--text-faint);}
+.empty svg{width:34px;height:34px;opacity:.4;margin-bottom:10px;}
+.empty p{font-size:13.5px;line-height:1.6;}
+.checkbox{width:22px;height:22px;border-radius:7px;border:1.5px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg-raised);}
+.checkbox svg{width:12px;height:12px;opacity:0;transition:opacity .12s;}
+.checkbox.checked{background:var(--amber);border-color:var(--amber);}
+.checkbox.checked svg{opacity:1;}
+.pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;display:inline-block;}
+.pill-green{background:rgba(111,168,111,.15);color:var(--green);}
+.pill-red{background:rgba(217,104,90,.15);color:var(--red);}
+.pill-amber{background:rgba(232,163,61,.15);color:var(--amber);}
+.pill-blue{background:rgba(91,155,213,.15);color:var(--blue);}
+.del-x{border:none;background:transparent;color:var(--text-faint);padding:4px;flex-shrink:0;}
+.del-x svg{width:15px;height:15px;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px;}
+.stat-card{background:var(--bg-card);border:1px solid var(--line-soft);border-radius:13px;padding:13px 14px;}
+.stat-label{font-size:11.5px;color:var(--text-faint);margin:0 0 4px;}
+.stat-value{font-size:19px;font-weight:600;margin:0;font-family:var(--mono);}
+
+.toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%) translateY(20px);background:#2A2A2A;color:var(--text);padding:10px 18px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:all .25s;z-index:60;border:1px solid var(--line);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;z-index:50;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--bg-raised);width:100%;border-radius:18px 18px 0 0;padding:18px 18px calc(18px + var(--safe-bottom));max-height:85vh;overflow-y:auto;}
+.modal h3{font-size:17px;margin:0 0 14px;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:12.5px;color:var(--text-dim);margin-bottom:5px;font-weight:600;}
+.field input,.field textarea,.field select{width:100%;}
+.modal-actions{display:flex;gap:8px;margin-top:6px;}
+.modal-actions button{flex:1;}
+
+.hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5L9.5 17L19 7" stroke="#151515" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <span class="brand-text">Daybook</span>
+    </div>
+  </div>
+  <div class="tab-title" id="tabTitle">Today</div>
+
+  <div class="content" id="content">
+
+    <!-- TODAY: planner + punch clock -->
+    <div class="page" data-page="today">
+      <div class="subswitch">
+        <button data-sub="planner" class="active">Planner</button>
+        <button data-sub="clock">Work clock</button>
+      </div>
+
+      <div class="subpage active" data-subpage="planner">
+        <div class="row-between" style="padding:0 4px 10px;">
+          <button class="btn-icon" id="planPrevDay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6L9 12L15 18"/></svg></button>
+          <div style="text-align:center;">
+            <div style="font-size:15px;font-weight:600;" id="planDateLabel">Today</div>
+            <div style="font-size:12px;color:var(--text-faint);" id="planDateSub"></div>
+          </div>
+          <button class="btn-icon" id="planNextDay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6L15 12L9 18"/></svg></button>
+        </div>
+        <div id="plannerList"></div>
+      </div>
+
+      <div class="subpage" data-subpage="clock">
+        <div class="card" style="text-align:center;padding:22px 14px;">
+          <div style="font-size:12.5px;color:var(--text-faint);margin-bottom:6px;" id="clockStatusLabel">Not clocked in</div>
+          <div style="font-size:32px;font-weight:600;font-family:var(--mono);margin-bottom:14px;" id="clockTimer">00:00:00</div>
+          <button class="btn btn-primary" id="clockToggleBtn" style="width:100%;padding:13px;">Clock in</button>
+        </div>
+        <div class="section-label">This week</div>
+        <div id="clockHistory"></div>
+      </div>
+    </div>
+
+    <!-- TASKS: tasks + notes -->
+    <div class="page" data-page="tasks">
+      <div class="subswitch">
+        <button data-sub="tasklist" class="active">Tasks</button>
+        <button data-sub="notes">Notes</button>
+      </div>
+      <div class="subpage active" data-subpage="tasklist">
+        <div id="taskList"></div>
+      </div>
+      <div class="subpage" data-subpage="notes">
+        <div id="noteList"></div>
+      </div>
+    </div>
+
+    <!-- MONEY: budget + investments -->
+    <div class="page" data-page="money">
+      <div class="subswitch">
+        <button data-sub="budget" class="active">Budget</button>
+        <button data-sub="invest">Investments</button>
+      </div>
+      <div class="subpage active" data-subpage="budget">
+        <div class="row-between" style="padding:0 4px 10px;">
+          <button class="btn-icon" id="budgetPrevMonth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6L9 12L15 18"/></svg></button>
+          <div style="font-size:15px;font-weight:600;" id="budgetMonthLabel"></div>
+          <button class="btn-icon" id="budgetNextMonth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6L15 12L9 18"/></svg></button>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card"><p class="stat-label">Income</p><p class="stat-value" id="budgetIncomeStat" style="color:var(--green);">₹0</p></div>
+          <div class="stat-card"><p class="stat-label">Expenses</p><p class="stat-value" id="budgetExpenseStat" style="color:var(--red);">₹0</p></div>
+          <div class="stat-card" style="grid-column:1/3;"><p class="stat-label">Balance</p><p class="stat-value" id="budgetBalanceStat">₹0</p></div>
+        </div>
+        <div class="section-label">Entries</div>
+        <div id="budgetList"></div>
+      </div>
+      <div class="subpage" data-subpage="invest">
+        <div class="stat-grid">
+          <div class="stat-card"><p class="stat-label">Total invested</p><p class="stat-value" id="investTotalStat">₹0</p></div>
+          <div class="stat-card"><p class="stat-label">Holdings</p><p class="stat-value" id="investCountStat">0</p></div>
+        </div>
+        <div id="investList"></div>
+      </div>
+    </div>
+
+    <!-- GOALS: bucket list -->
+    <div class="page" data-page="goals">
+      <div class="stat-grid" style="grid-template-columns:1fr;">
+        <div class="stat-card row-between">
+          <div><p class="stat-label">Completed</p><p class="stat-value" id="bucketStat">0 / 0</p></div>
+          <div style="width:44px;height:44px;position:relative;">
+            <svg viewBox="0 0 44 44" style="transform:rotate(-90deg);width:44px;height:44px;">
+              <circle cx="22" cy="22" r="18" fill="none" stroke="var(--line)" stroke-width="4"/>
+              <circle id="bucketRing" cx="22" cy="22" r="18" fill="none" stroke="var(--amber)" stroke-width="4" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div id="bucketList"></div>
+    </div>
+
+    <!-- FILES: project file log -->
+    <div class="page" data-page="files">
+      <div id="fileList"></div>
+    </div>
+
+  </div>
+
+  <div class="bottomnav">
+    <button class="navbtn active" data-nav="today">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+      <span>Today</span>
+    </button>
+    <button class="navbtn" data-nav="tasks">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      <span>Tasks</span>
+    </button>
+    <button class="navbtn" data-nav="money">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9 9.5c0-1 1-1.8 3-1.8s3 .8 3 1.8c0 2.4-6 1.6-6 4 0 1 1 1.8 3 1.8s3-.8 3-1.8"/></svg>
+      <span>Money</span>
+    </button>
+    <button class="navbtn" data-nav="goals">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span>Goals</span>
+    </button>
+    <button class="navbtn" data-nav="files">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+      <span>Files</span>
+    </button>
+  </div>
+
+  <button class="fab" id="fabBtn"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="#151515" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+var STORAGE_KEY = 'daybook_v1';
+var state = {
+  planner: {},      // dateKey -> [ {id,text,done,time} ]
+  clockSessions: [], // { id, inAt, outAt|null }
+  tasks: [],          // { id, text, due, done, project }
+  notes: [],           // { id, text, ts }
+  budget: {},          // monthKey -> [ {id,type:'in'|'out',label,amount} ]
+  investments: [],     // { id, name, amount, type, date }
+  bucket: [],           // { id, text, done }
+  files: []              // { id, project, location, version, delivered }
+};
+var saveTimer = null;
+var clockInterval = null;
+
+function uid(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function escapeHtml(s){ var d=document.createElement('div'); d.textContent=s==null?'':s; return d.innerHTML; }
+function fmtMoney(n){ n = Number(n)||0; return '₹' + n.toLocaleString('en-IN'); }
+function dateKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function monthKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function monthLabel(key){
+  var parts = key.split('-'); var d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, 1);
+  return d.toLocaleDateString([], {month:'long', year:'numeric'});
+}
+
+function load(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      var parsed = JSON.parse(raw);
+      Object.keys(state).forEach(function(k){ if(parsed[k] !== undefined) state[k] = parsed[k]; });
+    }
+  }catch(e){ console.warn('load failed', e); }
+}
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(function(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch(e){ showToast('Could not save — storage full?'); }
+  }, 150);
+}
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 1800);
+}
+
+/* ============ Navigation ============ */
+var currentNav = 'today';
+var currentSub = { today:'planner', tasks:'tasklist', money:'budget' };
+var navTitles = { today:'Today', tasks:'Tasks & notes', money:'Money', goals:'Bucket list', files:'Project files' };
+
+function switchNav(nav){
+  currentNav = nav;
+  document.querySelectorAll('.navbtn').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-nav')===nav); });
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.toggle('active', p.getAttribute('data-page')===nav); });
+  document.getElementById('tabTitle').textContent = navTitles[nav];
+  document.getElementById('fabBtn').classList.remove('hidden');
+  renderCurrent();
+}
+function switchSub(nav, sub){
+  currentSub[nav] = sub;
+  var page = document.querySelector('.page[data-page="'+nav+'"]');
+  page.querySelectorAll('.subswitch button').forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-sub')===sub); });
+  page.querySelectorAll('.subpage').forEach(function(sp){ sp.classList.toggle('active', sp.getAttribute('data-subpage')===sub); });
+  renderCurrent();
+}
+document.querySelectorAll('.navbtn').forEach(function(b){
+  b.addEventListener('click', function(){ switchNav(b.getAttribute('data-nav')); });
+});
+document.querySelectorAll('.subswitch button').forEach(function(b){
+  b.addEventListener('click', function(){
+    var nav = b.closest('.page').getAttribute('data-page');
+    switchSub(nav, b.getAttribute('data-sub'));
+  });
+});
+
+function activeKey(){
+  if(currentNav==='today' || currentNav==='tasks' || currentNav==='money') return currentSub[currentNav];
+  return currentNav;
+}
+
+function renderCurrent(){
+  var key = activeKey();
+  ({
+    planner: renderPlanner, clock: renderClock,
+    tasklist: renderTasks, notes: renderNotes,
+    budget: renderBudget, invest: renderInvest,
+    goals: renderBucket, files: renderFiles
+  })[key] && ({
+    planner: renderPlanner, clock: renderClock,
+    tasklist: renderTasks, notes: renderNotes,
+    budget: renderBudget, invest: renderInvest,
+    goals: renderBucket, files: renderFiles
+  })[key]();
+}
+
+/* ============ Modal helper ============ */
+function openModal(html, onMount){
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('show');
+  if(onMount) onMount();
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('show'); }
+document.getElementById('modalOverlay').addEventListener('click', function(e){
+  if(e.target === this) closeModal();
+});
+
+/* ============ FAB routing ============ */
+document.getElementById('fabBtn').addEventListener('click', function(){
+  var key = activeKey();
+  if(key==='planner') openPlannerModal();
+  else if(key==='clock') {} // clock has its own button, hide fab there
+  else if(key==='tasklist') openTaskModal();
+  else if(key==='notes') openNoteModal();
+  else if(key==='budget') openBudgetModal();
+  else if(key==='invest') openInvestModal();
+  else if(key==='goals') openBucketModal();
+  else if(key==='files') openFileModal();
+});
+function updateFabVisibility(){
+  document.getElementById('fabBtn').classList.toggle('hidden', activeKey()==='clock');
+}
+
+/* ============================================================
+   TODAY > PLANNER
+   ============================================================ */
+var plannerDate = new Date();
+
+function renderPlannerDateLabel(){
+  var today = new Date();
+  var isToday = dateKey(plannerDate) === dateKey(today);
+  document.getElementById('planDateLabel').textContent = isToday ? 'Today' : plannerDate.toLocaleDateString([], {weekday:'short', day:'numeric', month:'short'});
+  document.getElementById('planDateSub').textContent = isToday ? plannerDate.toLocaleDateString([], {weekday:'long', day:'numeric', month:'long'}) : '';
+}
+
+function renderPlanner(){
+  updateFabVisibility();
+  renderPlannerDateLabel();
+  var key = dateKey(plannerDate);
+  var items = (state.planner[key] || []).slice().sort(function(a,b){ return (a.time||'99:99').localeCompare(b.time||'99:99'); });
+  var wrap = document.getElementById('plannerList');
+  if(items.length===0){
+    wrap.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg><p>Nothing planned for this day yet.<br>Tap + to add something.</p></div>';
+    return;
+  }
+  wrap.innerHTML = items.map(function(it){
+    return '<div class="card row" data-id="'+it.id+'">'+
+      '<div class="checkbox plan-toggle'+(it.done?' checked':'')+'" data-id="'+it.id+'"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5L9.5 17L19 7" stroke="#151515" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'+
+      '<div style="flex:1;min-width:0;">'+
+        (it.time ? '<div style="font-size:11.5px;color:var(--amber);font-family:var(--mono);margin-bottom:2px;">'+escapeHtml(it.time)+'</div>' : '')+
+        '<div style="font-size:14.5px;'+(it.done?'color:var(--text-faint);text-decoration:line-through;':'')+'">'+escapeHtml(it.text)+'</div>'+
+      '</div>'+
+      '<button class="del-x plan-del" data-id="'+it.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+    '</div>';
+  }).join('');
+  wrap.querySelectorAll('.plan-toggle').forEach(function(el){
+    el.addEventListener('click', function(){
+      var id = el.getAttribute('data-id');
+      var arr = state.planner[key];
+      var item = arr.find(function(x){ return x.id===id; });
+      item.done = !item.done; save(); renderPlanner();
+    });
+  });
+  wrap.querySelectorAll('.plan-del').forEach(function(el){
+    el.addEventListener('click', function(){
+      var id = el.getAttribute('data-id');
+      state.planner[key] = state.planner[key].filter(function(x){ return x.id!==id; });
+      save(); renderPlanner();
+    });
+  });
+}
+
+document.getElementById('planPrevDay').addEventListener('click', function(){ plannerDate.setDate(plannerDate.getDate()-1); renderPlanner(); });
+document.getElementById('planNextDay').addEventListener('click', function(){ plannerDate.setDate(plannerDate.getDate()+1); renderPlanner(); });
+
+function openPlannerModal(){
+  openModal(
+    '<h3>Add to plan</h3>'+
+    '<div class="field"><label>What</label><input type="text" id="m_text" placeholder="e.g. Export client reel" /></div>'+
+    '<div class="field"><label>Time (optional)</label><input type="time" id="m_time" /></div>'+
+    '<div class="modal-actions"><button class="btn" onclick="window.__closeModal()">Cancel</button><button class="btn btn-primary" id="m_save">Add</button></div>',
+    function(){
+      document.getElementById('m_text').focus();
+      document.getElementById('m_save').addEventListener('click', function(){
+        var text = document.getElementById('m_text').value.trim();
+        if(!text) return;
+        var time = document.getElementById('m_time').value;
+        var key = dateKey(plannerDate);
+        if(!state.planner[key]) state.planner[key] = [];
+        state.planner[key].push({ id: uid(), text:text, time:time, done:false });
+        save(); closeModal(); renderPlanner();
+      });
+    }
+  );
+}
+
+/* ============================================================
+   TODAY > WORK CLOCK
+   ============================================================ */
+function activeSession(){
+  return state.clockSessions.find(function(s){ return s.outAt === null; }) || null;
+}
+function formatHMS(ms){
+  var s = Math.floor(ms/1000);
+  var h = String(Math.floor(s/3600)).padStart(2,'0');
+  var m = String(Math.floor((s%3600)/60)).padStart(2,'0');
+  var sec = String(s%60).padStart(2,'0');
+  return h+':'+m+':'+sec;
+}
+function renderClock(){
+  updateFabVisibility();
+  var sess = activeSession();
+  var btn = document.getElementById('clockToggleBtn');
+  var label = document.getElementById('clockStatusLabel');
+  clearInterval(clockInterval);
+  if(sess){
+    btn.textContent = 'Clock out';
+    btn.classList.add('btn-primary');
+    label.textContent = 'Clocked in at ' + new Date(sess.inAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    var tick = function(){ document.getElementById('clockTimer').textContent = formatHMS(Date.now() - sess.inAt); };
+    tick();
+    clockInterval = setInterval(tick, 1000);
+  } else {
+    btn.textContent = 'Clock in';
+    label.textContent = 'Not clocked in';
+    document.getElementById('clockTimer').textContent = '00:00:00';
+  }
+  renderClockHistory();
+}
+function renderClockHistory(){
+  var wrap = document.getElementById('clockHistory');
+  var weekAgo = Date.now() - 7*24*3600*1000;
+  var sessions = state.clockSessions.filter(function(s){ return s.outAt && s.inAt >= weekAgo; }).sort(function(a,b){ return b.inAt - a.inAt; });
+  if(sessions.length===0){
+    wrap.innerHTML = '<p style="color:var(--text-faint);font-size:13.5px;padding:6px 4px;">No completed sessions this week yet.</p>';
+    return;
+  }
+  wrap.innerHTML = sessions.map(function(s){
+    var d = new Date(s.inAt);
+    var dur = formatHMS(s.outAt - s.inAt);
+    return '<div class="card row-between"><div>'+
+      '<div style="font-size:14px;font-weight:600;">'+d.toLocaleDateString([], {weekday:'short', day:'numeric', month:'short'})+'</div>'+
+      '<div style="font-size:12px;color:var(--text-faint);">'+new Date(s.inAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' – '+new Date(s.outAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</div>'+
+      '</div><div style="font-family:var(--mono);font-size:14px;color:var(--amber);">'+dur+'</div></div>';
+  }).join('');
+}
+document.getElementById('clockToggleBtn').addEventListener('click', function(){
+  var sess = activeSession();
+  if(sess){ sess.outAt = Date.now(); showToast('Clocked out'); }
+  else { state.clockSessions.push({ id: uid(), inAt: Date.now(), outAt: null }); showToast('Clocked in'); }
+  save(); renderClock();
+});
+
+/* ============================================================
+   TASKS
+   ============================================================ */
+function renderTasks(){
+  updateFabVisibility();
+  var wrap = document.getElementById('taskList');
+  var items = state.tasks.slice().sort(function(a,b){
+    if(a.done !== b.done) return a.done ? 1 : -1;
+    return (a.due||'9999').localeCompare(b.due||'9999');
+  });
+  if(items.length===0){
+    wrap.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg><p>No tasks yet.<br>Tap + to add a task or deadline.</p></div>';
+    return;
+  }
+  var today = dateKey(new Date());
+  wrap.innerHTML = items.map(function(t){
+    var overdue = t.due && t.due < today && !t.done;
+    return '<div class="card row" data-id="'+t.id+'">'+
+      '<div class="checkbox task-toggle'+(t.done?' checked':'')+'" data-id="'+t.id+'"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5L9.5 17L19 7" stroke="#151515" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'+
+      '<div style="flex:1;min-width:0;">'+
+        '<div style="font-size:14.5px;'+(t.done?'color:var(--text-faint);text-decoration:line-through;':'')+'">'+escapeHtml(t.text)+'</div>'+
+        '<div class="row" style="gap:6px;margin-top:4px;">'+
+          (t.project ? '<span class="pill pill-blue">'+escapeHtml(t.project)+'</span>' : '')+
+          (t.due ? '<span class="pill '+(overdue?'pill-red':'pill-amber')+'">'+(overdue?'Overdue: ':'Due ')+t.due+'</span>' : '')+
+        '</div>'+
+      '</div>'+
+      '<button class="del-x task-del" data-id="'+t.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+    '</div>';
+  }).join('');
+  wrap.querySelectorAll('.task-toggle').forEach(function(el){
+    el.addEventListener('click', function(){
+      var t = state.tasks.find(function(x){ return x.id===el.getAttribute('data-id'); });
+      t.done = !t.done; save(); renderTasks();
+    });
+  });
+  wrap.querySelectorAll('.task-del').forEach(function(el){
+    el.addEventListener('click', function(){
+      state.tasks = state.tasks.filter(function(x){ return x.id!==el.getAttribute('data-id'); });
+      save(); renderTasks();
+    });
+  });
+}
+function openTaskModal(){
+  openModal(
+    '<h3>Add task</h3>'+
+    '<div class="field"><label>Task</label><input type="text" id="m_text" placeholder="e.g. Send final cut to client" /></div>'+
+    '<div class="field"><label>Project (optional)</label><input type="text" id="m_project" placeholder="e.g. Digi Marketrix reel" /></div>'+
+    '<div class="field"><label>Due date (optional)</label><input type="date" id="m_due" /></div>'+
+    '<div class="modal-actions"><button class="btn" onclick="window.__closeModal()">Cancel</button><button class="btn btn-primary" id="m_save">Add</button></div>',
+    function(){
+      document.getElementById('m_text').focus();
+      document.getElementById('m_save').addEventListener('click', function(){
+        var text = document.getElementById('m_text').value.trim();
+        if(!text) return;
+        state.tasks.push({ id: uid(), text:text, project: document.getElementById('m_project').value.trim(), due: document.getElementById('m_due').value, done:false });
+        save(); closeModal(); renderTasks();
+      });
+    }
+  );
+}
+
+/* ============================================================
+   NOTES
+   ============================================================ */
+function renderNotes(){
+  updateFabVisibility();
+  var wrap = document.getElementById('noteList');
+  var items = state.notes.slice().sort(function(a,b){ return b.ts - a.ts; });
+  if(items.length===0){
+    wrap.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5"/></svg><p>No notes yet.<br>Tap + to jot something down.</p></div>';
+    return;
+  }
+  wrap.innerHTML = items.map(function(n){
+    var d = new Date(n.ts);
+    return '<div class="card row-between" data-id="'+n.id+'" style="align-items:flex-start;">'+
+      '<div style="flex:1;min-width:0;"><div style="font-size:14.5px;white-space:pre-wrap;">'+escapeHtml(n.text)+'</div>'+
+      '<div style="font-size:11.5px;color:var(--text-faint);margin-top:5px;">'+d.toLocaleDateString([],{day:'numeric',month:'short'})+', '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</div></div>'+
+      '<button class="del-x note-del" data-id="'+n.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+    '</div>';
+  }).join('');
+  wrap.querySelectorAll('.note-del').forEach(function(el){
+    el.addEventListener('click', function(){
+      state.notes = state.notes.filter(function(x){ return x.id!==el.getAttribute('data-id'); });
+      save(); renderNotes();
+    });
+  });
+}
+function openNoteModal(){
+  openModal(
+    '<h3>New note</h3>'+
+    '<div class="field"><textarea id="m_text" rows="4" placeholder="Idea, reminder, anything..."></textarea></div>'+
+    '<div class="modal-actions"><button class="btn" onclick="window.__closeModal()">Cancel</button><button class="btn btn-primary" id="m_save">Save</button></div>',
+    function(){
+      document.getElementById('m_text').focus();
+      document.getElementById('m_save').addEventListener('click', function(){
+        var text = document.getElementById('m_text').value.trim();
+        if(!text) return;
+        state.notes.push({ id: uid(), text:text, ts: Date.now() });
+        save(); closeModal(); renderNotes();
+      });
+    }
+  );
+}
+
+/* ============================================================
+   MONEY > BUDGET
+   ============================================================ */
+var budgetDate = new Date();
+function renderBudget(){
+  updateFabVisibility();
+  document.getElementById('budgetMonthLabel').textContent = budgetDate.toLocaleDateString([], {month:'long', year:'numeric'});
+  var key = monthKey(budgetDate);
+  var items = (state.budget[key] || []).slice().sort(function(a,b){ return b.ts - a.ts; });
+  var income = items.filter(function(i){ return i.type==='in'; }).reduce(function(s,i){ return s+Number(i.amount); }, 0);
+  var expense = items.filter(function(i){ return i.type==='out'; }).reduce(function(s,i){ return s+Number(i.amount); }, 0);
+  document.getElementById('budgetIncomeStat').textContent = fmtMoney(income);
+  document.getElementById('budgetExpenseStat').textContent = fmtMoney(expense);
+  var bal = document.getElementById('budgetBalanceStat');
+  bal.textContent = fmtMoney(income-expense);
+  bal.style.color = (income-expense) >= 0 ? 'var(--green)' : 'var(--red)';
+
+  var wrap = document.getElementById('budgetList');
+  if(items.length===0){
+    wrap.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v10"/></svg><p>No entries for this month.<br>Tap + to log income or an expense.</p></div>';
+    return;
+  }
+  wrap.innerHTML = items.map(function(i){
+    return '<div class="card row-between" data-id="'+i.id+'">'+
+      '<div><div style="font-size:14.5px;">'+escapeHtml(i.label)+'</div>'+
+      '<div style="font-size:11.5px;color:var(--text-faint);margin-top:2px;">'+(i.type==='in'?'Income':'Expense')+'</div></div>'+
+      '<div class="row" style="gap:8px;">'+
+        '<span style="font-family:var(--mono);font-size:15px;font-weight:600;color:'+(i.type==='in'?'var(--green)':'var(--red)')+';">'+(i.type==='in'?'+':'-')+fmtMoney(i.amount).replace('₹','₹')+'</span>'+
+        '<button class="del-x budget-del" data-id="'+i.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+      '</div></div>';
+  }).join('');
+  wrap.querySelectorAll('.budget-del').forEach(function(el){
+    el.addEventListener('click', function(){
+      var key = monthKey(budgetDate);
+      state.budget[key] = state.budget[key].filter(function(x){ return x.id!==el.getAttribute('data-id'); });
+      save(); renderBudget();
+    });
+  });
+}
+document.getElementById('budgetPrevMonth').addEventListener('click', function(){ budgetDate.setMonth(budgetDate.getMonth()-1); renderBudget(); });
+document.getElementById('budgetNextMonth').addEventListener('click', function(){ budgetDate.setMonth(budgetDate.getMonth()+1); renderBudget(); });
+
+function openBudgetModal(){
+  openModal(
+    '<h3>Add entry</h3>'+
+    '<div class="field"><label>Type</label><select id="m_type"><option value="in">Income</option><option value="out">Expense</option></select></div>'+
+    '<div class="field"><label>Label</label><input type="text" id="m_label" placeholder="e.g. Client payment — reel edit" /></div>'+
+    '<div class="field"><label>Amount (₹)</label><input type="number" id="m_amount" inputmode="decimal" placeholder="0" /></div>'+
+    '<div class="modal-actions"><button class="btn" onclick="window.__closeModal()">Cancel</button><button class="btn btn-primary" id="m_save">Add</button></div>',
+    function(){
+      document.getElementById('m_label').focus();
+      document.getElementById('m_save').addEventListener('click', function(){
+        var label = document.getElementById('m_label').value.trim();
+        var amount = parseFloat(document.getElementById('m_amount').value);
+        if(!label || !amount) return;
+        var key = monthKey(budgetDate);
+        if(!state.budget[key]) state.budget[key] = [];
+        state.budget[key].push({ id: uid(), type: document.getElementById('m_type').value, label:label, amount:amount, ts: Date.now() });
+        save(); closeModal(); renderBudget();
+      });
+    }
+  );
+}
+
+/* ============================================================
+   MONEY > INVESTMENTS
+   ============================================================ */
+function renderInvest(){
+  updateFabVisibility();
+  var items = state.investments.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+  var total = items.reduce(function(s,i){ return s+Number(i.amount); }, 0);
+  document.getElementById('investTotalStat').textContent = fmtMoney(total);
+  document.getElementById('investCountStat').textContent = items.length;
+  var wrap = document.getElementById('investList');
+  if(items.length===0){
+    wrap.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17l6-6 4 4 8-8"/></svg><p>No investments logged yet.<br>Tap + to add one.</p></div>';
+    return;
+  }
+  wrap.innerHTML = items.map(function(i){
+    return '<div class="card row-between" data-id="'+i.id+'">'+
+      '<div><div style="font-size:14.5px;">'+escapeHtml(i.name)+'</div>'+
+      '<div class="row" style="gap:6px;margin-top:4px;"><span class="pill pill-blue">'+escapeHtml(i.type||'Other')+'</span>'+(i.date?'<span style="font-size:11.5px;color:var(--text-faint);">'+i.date+'</span>':'')+'</div></div>'+
+      '<div class="row" style="gap:8px;"><span style="font-family:var(--mono);font-size:15px;font-weight:600;">'+fmtMoney(i.amount)+'</span>'+
+      '<button class="del-x invest-del" data-id="'+i.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div></div>';
+  }).join('');
+  wrap.querySelectorAll('.invest-del').forEach(function(el){
+    el.addEventListener('click', function(){
+      state.investments = state.investments.filter(function(x){ return x.id!==el.getAttribute('data-id'); });
+      save(); renderInvest();
+    });
+  });
+}
+function openInvestModal(){
+  openModal(
+    '<h3>Add investment</h3>'+
+    '<div class="field"><label>Name</label><input type="text" id="m_name" placeholder="e.g. Nifty 50 index fund SIP" /></div>'+
+    '<div class="field"><label>Type</label><select id="m_type"><option>SIP / Mutual fund</option><option>Stocks</option><option>Fixed deposit</option><option>Gold</option><option>Crypto</option><option>Other</option></select></div>'+
+    '<div class="field"><label>Amount (₹)</label><input type="number" id="m_amount" inputmode="decimal" placeholder="0" /></div>'+
+    '<div class="field"><label>Date</label><input type="date" id="m_date" /></div>'+
+    '<div class="modal-actions"><button class="btn" onclick="window.__closeModal()">Cancel</button><button class="btn btn-primary" id="m_save">Add</button></div>',
+    function(){
+      document.getElementById('m_name').focus();
+      document.getElementById('m_save').addEventListener('click', function(){
+        var name = document.getElementById('m_name').value.trim();
+        var amount = parseFloat(document.getElementById('m_amount').value);
+        if(!name || !amount) return;
+        state.investments.push({ id: uid(), name:name, type: document.getElementById('m_type').value, amount:amount, date: document.getElementById('m_date').value });
+        save(); closeModal(); renderInvest();
+      });
+    }
+  );
+}
+
+/* ============================================================
+   GOALS > BUCKET LIST
+   ============================================================ */
+function renderBucket(){
+  updateFabVisibility();
+  var items = state.bucket.slice().sort(function(a,b){ if(a.done!==b.done) return a.done?1:-1; return 0; });
+  var done = state.bucket.filter(function(i){ return i.done; }).length;
+  var total = state.bucket.length;
+  document.getElementById('bucketStat').textContent = done+' / '+total;
+  var pct = total ? done/total : 0;
+  var circ = 2*Math.PI*18;
+  document.getElementById('bucketRing').setAttribute('stroke-dasharray', circ);
+  document.getElementById('bucketRing').setAttribute('stroke-dashoffset', circ - pct*circ);
+
+  var wrap = document.getElementById('bucketList');
+  if(items.length===0){
+    wrap.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg><p>No goals yet.<br>Tap + to add something you want to do someday.</p></div>';
+    return;
+  }
+  wrap.innerHTML = items.map(function(b){
+    return '<div class="card row" data-id="'+b.id+'">'+
+      '<div class="checkbox bucket-toggle'+(b.done?' checked':'')+'" data-id="'+b.id+'"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5L9.5 17L19 7" stroke="#151515" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'+
+      '<div style="flex:1;min-width:0;font-size:14.5px;'+(b.done?'color:var(--text-faint);text-decoration:line-through;':'')+'">'+escapeHtml(b.text)+'</div>'+
+      '<button class="del-x bucket-del" data-id="'+b.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+    '</div>';
+  }).join('');
+  wrap.querySelectorAll('.bucket-toggle').forEach(function(el){
+    el.addEventListener('click', function(){
+      var b = state.bucket.find(function(x){ return x.id===el.getAttribute('data-id'); });
+      b.done = !b.done; save(); renderBucket();
+    });
+  });
+  wrap.querySelectorAll('.bucket-del').forEach(function(el){
+    el.addEventListener('click', function(){
+      state.bucket = state.bucket.filter(function(x){ return x.id!==el.getAttribute('data-id'); });
+      save(); renderBucket();
+    });
+  });
+}
+function openBucketModal(){
+  openModal(
+    '<h3>Add to bucket list</h3>'+
+    '<div class="field"><label>Goal</label><input type="text" id="m_text" placeholder="e.g. Shoot a short film in the Himalayas" /></div>'+
+    '<div class="modal-actions"><button class="btn" onclick="window.__closeModal()">Cancel</button><button class="btn btn-primary" id="m_save">Add</button></div>',
+    function(){
+      document.getElementById('m_text').focus();
+      document.getElementById('m_save').addEventListener('click', function(){
+        var text = document.getElementById('m_text').value.trim();
+        if(!text) return;
+        state.bucket.push({ id: uid(), text:text, done:false });
+        save(); closeModal(); renderBucket();
+      });
+    }
+  );
+}
+
+/* ============================================================
+   FILES > PROJECT FILE LOG
+   ============================================================ */
+function renderFiles(){
+  updateFabVisibility();
+  var items = state.files.slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  var wrap = document.getElementById('fileList');
+  if(items.length===0){
+    wrap.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg><p>No projects logged yet.<br>Tap + to track where a project&#39;s files live.</p></div>';
+    return;
+  }
+  wrap.innerHTML = items.map(function(f){
+    return '<div class="card" data-id="'+f.id+'">'+
+      '<div class="row-between"><div style="font-size:15px;font-weight:600;">'+escapeHtml(f.project)+'</div>'+
+      '<button class="del-x file-del" data-id="'+f.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>'+
+      (f.location ? '<div style="font-size:13px;color:var(--text-dim);margin-top:6px;"><i></i>'+escapeHtml(f.location)+'</div>' : '')+
+      '<div class="row" style="gap:6px;margin-top:8px;">'+
+        (f.version ? '<span class="pill pill-blue">v'+escapeHtml(f.version)+'</span>' : '')+
+        '<span class="pill '+(f.delivered?'pill-green':'pill-amber')+'">'+(f.delivered?'Delivered':'In progress')+'</span>'+
+      '</div></div>';
+  }).join('');
+  wrap.querySelectorAll('.file-del').forEach(function(el){
+    el.addEventListener('click', function(){
+      state.files = state.files.filter(function(x){ return x.id!==el.getAttribute('data-id'); });
+      save(); renderFiles();
+    });
+  });
+}
+function openFileModal(){
+  openModal(
+    '<h3>Log project files</h3>'+
+    '<div class="field"><label>Project name</label><input type="text" id="m_project" placeholder="e.g. Coimbatore client — Instagram reels" /></div>'+
+    '<div class="field"><label>Where the files live</label><input type="text" id="m_location" placeholder="e.g. D:/Projects/ClientA/Final" /></div>'+
+    '<div class="field"><label>Current version</label><input type="text" id="m_version" placeholder="e.g. 4" /></div>'+
+    '<div class="field"><label class="row" style="gap:8px;"><input type="checkbox" id="m_delivered" style="width:auto;" /> Already delivered to client</label></div>'+
+    '<div class="modal-actions"><button class="btn" onclick="window.__closeModal()">Cancel</button><button class="btn btn-primary" id="m_save">Add</button></div>',
+    function(){
+      document.getElementById('m_project').focus();
+      document.getElementById('m_save').addEventListener('click', function(){
+        var project = document.getElementById('m_project').value.trim();
+        if(!project) return;
+        state.files.push({
+          id: uid(), project:project,
+          location: document.getElementById('m_location').value.trim(),
+          version: document.getElementById('m_version').value.trim(),
+          delivered: document.getElementById('m_delivered').checked,
+          ts: Date.now()
+        });
+        save(); closeModal(); renderFiles();
+      });
+    }
+  );
+}
+
+/* ============ Init ============ */
+window.__closeModal = closeModal;
+load();
+switchNav('today');
+
+})();
+</script>
+</body>
+</html>
